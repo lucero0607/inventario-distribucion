@@ -143,7 +143,6 @@ export default function Home() {
     role: adminRole,
   };
 
-  const [newCatName, setNewCatName] = useState("");
   const [showCatInput, setShowCatInput] = useState(false);
 
   // -------- LOAD --------
@@ -245,11 +244,32 @@ export default function Home() {
       return;
     }
     startTransition(async () => {
-      const cat = formCategory;
+      // Si se escribió una nueva categoría en el input, crearla si no existe
+      let finalCategory = formCategory;
+      if (showCatInput) {
+        try {
+          const newCat = await crearCategoria(formCategory);
+          finalCategory = newCat.name;
+        } catch (e: any) {
+          // Si ya existe o hay error, procedemos con el nombre ingresado
+          console.warn("Category creation skip:", e.message);
+        }
+      }
+
       const q = Math.max(0, parseInt(formQty) || 0);
-      const p = { name: formName, description: formDesc || undefined, category: cat, brand: formBrand || undefined, serialNumber: formSerial || undefined, quantity: q, location: formLocation || undefined };
+      const p = { 
+        name: formName, 
+        description: formDesc || undefined, 
+        category: finalCategory, 
+        brand: formBrand || undefined, 
+        serialNumber: formSerial || undefined, 
+        quantity: q, 
+        location: formLocation || undefined 
+      };
       if (editingId) await actualizarItem(editingId, p); else await crearItem(p);
-      resetEquipoForm(); await loadAll();
+      resetEquipoForm(); 
+      setShowCatInput(false);
+      await loadAll();
     });
   };
 
@@ -258,23 +278,11 @@ export default function Home() {
     setFormCategory(item.category);
     setFormBrand(item.brand || ""); setFormSerial(item.serialNumber || "");
     setFormQty(String(item.quantity)); setFormLocation(item.location || "");
+    setShowCatInput(false);
     setShowEquipoModal(true);
   };
 
-  const handleCreateCategory = async () => {
-    if (!newCatName.trim()) return;
-    startTransition(async () => {
-      try {
-        const newCat = await crearCategoria(newCatName);
-        setCategories([...categories, newCat]);
-        setFormCategory(newCat.name);
-        setNewCatName("");
-        setShowCatInput(false);
-      } catch (err: any) {
-        alert(err.message || "Error al crear categoría");
-      }
-    });
-  };
+  // Se eliminó handleCreateCategory ya que ahora se integra en submitEquipo
 
   // -------- DELETE --------
   const confirmDelete = () => {
@@ -963,23 +971,13 @@ export default function Home() {
               </button>
             </div>
             {showCatInput ? (
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  className="flex-1 px-4 py-2.5 border border-blue-200 dark:border-blue-900/50 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" 
-                  placeholder="Nueva categoría..." 
-                  value={newCatName} 
-                  onChange={e => setNewCatName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
-                />
-                <button 
-                  onClick={handleCreateCategory}
-                  className="px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-                  title="Guardar Categoría"
-                >
-                  <Save size={16} />
-                </button>
-              </div>
+              <input 
+                type="text" 
+                className="w-full px-4 py-2.5 border border-blue-200 dark:border-blue-900/50 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                placeholder="Escribe la categoría..." 
+                value={formCategory} 
+                onChange={e => setFormCategory(e.target.value)}
+              />
             ) : (
               <select className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none cursor-pointer" value={formCategory} onChange={e => setFormCategory(e.target.value)}>
                 <option value="">Seleccionar</option>
