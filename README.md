@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Inventario & Distribución
 
-## Getting Started
+Sistema de gestión de inventario premium diseñado para el control eficiente de entregas, ventas y mantenimiento de equipos.
 
-First, run the development server:
+## 🚀 Características Principales
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Dashboard Inteligente**: Visualización en tiempo real de KPIs (Disponibles, No disponibles, Mantenimiento, etc.) y gráficos de actividad reciente.
+- **Gestión de Inventario**: Control detallado de stock, marcas, series y estados de equipos.
+- **Sistema de Entregas & Ventas**: Modal interactivo para registrar salidas, permitiendo asignar responsables (usuarios del sistema o externos).
+- **Control de Devoluciones (Single-Row)**: Gestión optimizada que permite marcar devoluciones en el mismo registro de entrega, manteniendo la trazabilidad con fechas exactas de salida y entrada.
+- **Mantenimiento**: Módulo para seguimiento de reparaciones con prioridades y estados.
+- **Historial de Movimientos**: Registro completo y auditable de todas las transacciones realizadas.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Tecnologías
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Frontend**: Next.js 15 (App Router), Tailwind CSS, Lucide React (Icons), Recharts (Charts).
+- **Backend/ORM**: Prisma (SQLite para desarrollo local rápido).
+- **Lenguaje**: TypeScript.
+- **Estilo**: Shadcn UI / Custom Premium Glassmorphism.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📦 Instalación
 
-## Learn More
+1. Clona el repositorio.
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+3. Inicializa la base de datos:
+   ```bash
+   npx prisma db push
+   ```
+4. Inicia el servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## 🔒 Auditoría & Trazabilidad
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Cada movimiento registra el usuario responsable.
+- Soporta responsables externos mediante el campo `customResponsible`.
+- Las devoluciones actualizan automáticamente el stock y registran el timestamp `returnedAt`.
