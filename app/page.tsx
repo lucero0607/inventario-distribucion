@@ -18,6 +18,7 @@ import { registrarMovimiento, getMovimientos, devolverMovimiento } from "@/app/a
 import { crearMantenimiento, getMantenimientos, cambiarEstadoMantenimiento, resolverMantenimientosLote } from "@/app/actions/mantenimiento";
 
 import { getUsuarios, crearUsuario, cambiarEstadoUsuario, eliminarUsuario } from "@/app/actions/usuarios";
+import { getCategorias, crearCategoria } from "@/app/actions/categorias";
 
 
 // Components
@@ -78,6 +79,7 @@ export default function Home() {
   const [movimientos, setMovimientos] = useState<Movement[]>([]);
   const [mantenimientos, setMantenimientos] = useState<MaintenanceLog[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   // UI
   const [busqueda, setBusqueda] = useState("");
@@ -101,7 +103,6 @@ export default function Home() {
   const [formName, setFormName] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState("");
-  const [formCustomCategory, setFormCustomCategory] = useState("");
   const [formBrand, setFormBrand] = useState("");
   const [formSerial, setFormSerial] = useState("");
   const [formQty, setFormQty] = useState("1");
@@ -142,18 +143,22 @@ export default function Home() {
     role: adminRole,
   };
 
+  const [newCatName, setNewCatName] = useState("");
+  const [showCatInput, setShowCatInput] = useState(false);
+
   // -------- LOAD --------
   const loadAll = async () => {
     console.log("Starting loadAll...");
     try {
-      const [eqps, stats, mvts, mnts, users] = await Promise.all([
-        getItems(), getKpisInventario(), getMovimientos(), getMantenimientos(), getUsuarios()
+      const [eqps, stats, mvts, mnts, users, cats] = await Promise.all([
+        getItems(), getKpisInventario(), getMovimientos(), getMantenimientos(), getUsuarios(), getCategorias()
       ]);
       setItems(eqps as Item[]);
       setKpis(stats);
       setMovimientos(mvts);
       setMantenimientos(mnts);
       setUsersList(users);
+      setCategories(cats);
 
       // Actualizar email del admin si se encuentra
       const me = users.find((u) => u.username === "admin" || (u as User).name === adminName);
@@ -228,19 +233,19 @@ export default function Home() {
 
   // -------- EQUIPO --------
   const resetEquipoForm = () => {
-    setFormName(""); setFormDesc(""); setFormCategory(""); setFormCustomCategory("");
+    setFormName(""); setFormDesc(""); setFormCategory(""); 
     setFormBrand(""); setFormSerial(""); setFormQty("1"); setFormLocation("");
     setEditingId(null); setShowEquipoModal(false);
   };
 
   const submitEquipo = () => {
-    if (!formName.trim() || !formCategory.trim() || (formCategory === "otro" && !formCustomCategory.trim())) return;
+    if (!formName.trim() || !formCategory.trim()) return;
     if (parseInt(formQty) < 0) {
       alert("La cantidad no puede ser negativa.");
       return;
     }
     startTransition(async () => {
-      const cat = formCategory === "otro" ? formCustomCategory : formCategory;
+      const cat = formCategory;
       const q = Math.max(0, parseInt(formQty) || 0);
       const p = { name: formName, description: formDesc || undefined, category: cat, brand: formBrand || undefined, serialNumber: formSerial || undefined, quantity: q, location: formLocation || undefined };
       if (editingId) await actualizarItem(editingId, p); else await crearItem(p);
@@ -250,12 +255,25 @@ export default function Home() {
 
   const openEdit = (item: Item) => {
     setEditingId(item.id); setFormName(item.name); setFormDesc(item.description || "");
-    const std = ["computadora", "laptop", "monitor", "celular", "teclado", "mouse", "impresora"];
-    if (std.includes(item.category.toLowerCase())) { setFormCategory(item.category.toLowerCase()); setFormCustomCategory(""); }
-    else { setFormCategory("otro"); setFormCustomCategory(item.category); }
+    setFormCategory(item.category);
     setFormBrand(item.brand || ""); setFormSerial(item.serialNumber || "");
     setFormQty(String(item.quantity)); setFormLocation(item.location || "");
     setShowEquipoModal(true);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCatName.trim()) return;
+    startTransition(async () => {
+      try {
+        const newCat = await crearCategoria(newCatName);
+        setCategories([...categories, newCat]);
+        setFormCategory(newCat.name);
+        setNewCatName("");
+        setShowCatInput(false);
+      } catch (err: any) {
+        alert(err.message || "Error al crear categoría");
+      }
+    });
   };
 
   // -------- DELETE --------
@@ -932,12 +950,45 @@ export default function Home() {
       <Modal open={showEquipoModal} onClose={resetEquipoForm} title={editingId ? "Editar Equipo" : "Nuevo Equipo"} size="lg">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Nombre *" v={formName} set={setFormName} ph="Ej: Laptop Dell" />
-          <div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Categoría *</label>
-            <select className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" value={formCategory} onChange={e => setFormCategory(e.target.value)}>
-              <option value="">Seleccionar</option><option value="computadora">Computadora</option><option value="laptop">Laptop</option><option value="monitor">Monitor</option><option value="celular">Celular</option><option value="teclado">Teclado</option><option value="mouse">Mouse</option><option value="impresora">Impresora</option><option value="otro">Otro</option>
-            </select>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Categoría *</label>
+              <button 
+                type="button" 
+                onClick={() => setShowCatInput(!showCatInput)}
+                className={`p-1 rounded-md transition ${showCatInput ? "bg-red-500 text-white" : "bg-blue-600 text-white shadow-sm shadow-blue-500/20"}`}
+                title={showCatInput ? "Cancelar" : "Agregar categoría personalizada"}
+              >
+                {showCatInput ? <X size={12} /> : <Plus size={12} />}
+              </button>
+            </div>
+            {showCatInput ? (
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  className="flex-1 px-4 py-2.5 border border-blue-200 dark:border-blue-900/50 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                  placeholder="Nueva categoría..." 
+                  value={newCatName} 
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
+                />
+                <button 
+                  onClick={handleCreateCategory}
+                  className="px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                  title="Guardar Categoría"
+                >
+                  <Save size={16} />
+                </button>
+              </div>
+            ) : (
+              <select className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none cursor-pointer" value={formCategory} onChange={e => setFormCategory(e.target.value)}>
+                <option value="">Seleccionar</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+            )}
           </div>
-          {formCategory === "otro" && <Field label="Otra categoría *" v={formCustomCategory} set={setFormCustomCategory} ph="Especifica..." />}
           <Field label="Marca" v={formBrand} set={setFormBrand} ph="Dell, HP..." />
           <Field label="Nro. Serie" v={formSerial} set={setFormSerial} ph="SN-123" />
           <Field label="Cantidad" v={formQty} set={setFormQty} type="number" min="0" />
