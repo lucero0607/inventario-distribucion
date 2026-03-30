@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  firstName   String?
+  lastName    String?
+  email       String?      @unique
+  username    String       @unique
+  password    String
+  role        String       @default("STAFF") // ADMIN, STAFF
+  status      String       @default("ACTIVO") // ACTIVO, INACTIVO
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  requests    Request[]
+  historyLogs HistoryLog[]
+  movements   Movement[]
+}
+
+model Item {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  category     String
+  brand        String?
+  serialNumber String?
+  quantity     Int      @default(0)
+  status       String   @default("DISPONIBLE") // DISPONIBLE, MANTENIMIENTO, ASIGNADO
+  location     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requests        Request[]
+  maintenanceLogs MaintenanceLog[]
+  historyLogs     HistoryLog[]
+  movements       Movement[]
+}
+
+model Request {
+  id                      String    @id @default(cuid())
+  tipo                    String // "equipo" | "mantenimiento" | "salida"
+  descripcion             String
+  solicitante             String?
+  solicitanteNombre       String?
+  prioridad               String    @default("Media") // Baja, Media, Alta, Urgente
+  motivo                  String?
+  fechaRequerida          DateTime?
+  fechaDevolucionEstimada DateTime?
+  aprobadoPor             String?
+  status                  String    @default("PENDIENTE") // PENDIENTE, EN_PROCESO, APROBADA, RECHAZADA, ENTREGADO, DEVUELTO
+  date                    DateTime  @default(now())
+  itemId                  String?
+  item                    Item?     @relation(fields: [itemId], references: [id])
+  responsibleUserId       String?
+  responsibleUser         User?     @relation(fields: [responsibleUserId], references: [id])
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+model MaintenanceLog {
+  id                 String    @id @default(cuid())
+  nombre             String
+  description        String
+  tecnicoAsignado    String?
+  prioridad          String    @default("Media")
+  status             String    @default("Pendiente") // Pendiente, En proceso, Terminado
+  diagnosticoInicial String?
+  costoEstimado      Float?
+  accionesRealizadas String?
+  piezasReemplazadas String?
+  costoReal          Float?
+  startDate          DateTime  @default(now())
+  endDate            DateTime?
+  fechaLiberacion    DateTime?
+  itemId             String?
+  item               Item?     @relation(fields: [itemId], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model HistoryLog {
+  id                String   @id @default(cuid())
+  action            String // CREADO, ACTUALIZADO, ESTADO_CAMBIADO, ELIMINADO, MOVIMIENTO
+  entityId          String
+  entityType        String // ITEM, REQUEST, MAINTENANCE, USER, MOVEMENT
+  details           String?
+  itemId            String?
+  item              Item?    @relation(fields: [itemId], references: [id])
+  responsibleUserId String?
+  responsibleUser   User?    @relation(fields: [responsibleUserId], references: [id])
+  date              DateTime @default(now())
+}
+
+model Movement {
+  id                String   @id @default(cuid())
+  type              String // ENTRADA, SALIDA
+  date              DateTime @default(now())
+  reason            String?
+  details           String?
+  itemId            String
+  item              Item     @relation(fields: [itemId], references: [id])
+  responsibleUserId String?
+  responsibleUser   User?    @relation(fields: [responsibleUserId], references: [id])
+  customResponsible String?
+  returnedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
